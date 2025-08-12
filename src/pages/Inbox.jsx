@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 const Inbox = () => {
   return (
     <div>
-      <Sidebar />
+      <Sidebar/>
       
     </div>
   )

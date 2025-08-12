@@ -81,23 +81,42 @@ const Sidebar = () => {
   };
 
   // Fetch real email counts from API
-  const fetchEmailCounts = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
-      if (response.ok) {
-        const counts = await response.json();
-        setInboxCount(counts.inbox || 0);
-        setSentCount(counts.sent || 0);
-        setDraftsCount(counts.drafts || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching email counts:', error);
-      // Fallback: Calculate from connected accounts
-      const totalInbox = connectedAccounts.reduce((sum, account) => 
-        sum + (account.messages?.length || 0), 0);
-      setInboxCount(totalInbox);
+ const fetchEmailCounts = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
+    if (response.ok) {
+      const counts = await response.json();
+      setInboxCount(counts.inbox || 0);
+      setSentCount(counts.sent || 0);
+      setDraftsCount(counts.drafts || 0);
+    } else {
+      console.warn("API did not return OK, using fallback");
+      calculateCountsFromLocal();
     }
-  };
+  } catch (error) {
+    console.error("Error fetching email counts:", error);
+    calculateCountsFromLocal();
+  }
+};
+
+// 🔹 Fallback: Calculate from connectedAccounts
+const calculateCountsFromLocal = () => {
+  let totalInbox = 0;
+  let totalSent = 0;
+  let totalDrafts = 0;
+
+  connectedAccounts.forEach((account) => {
+    // Adjust these based on how your local data is stored
+    totalInbox += account.inbox?.length || 0;
+    totalSent += account.sent?.length || 0;
+    totalDrafts += account.drafts?.length || 0;
+  });
+
+  setInboxCount(totalInbox);
+  setSentCount(totalSent);
+  setDraftsCount(totalDrafts);
+};
+
 
   const handleRemoveAccount = async (accountEmail) => {
     try {
