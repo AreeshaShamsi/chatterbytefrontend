@@ -14,7 +14,8 @@ import {
   LogOut,
   User,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 
 // Import Firebase Auth (add this to your actual project)
@@ -25,6 +26,8 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [connectedAccounts, setConnectedAccounts] = useState([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [accountToRemove, setAccountToRemove] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedAccounts, setExpandedAccounts] = useState({});
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
@@ -81,7 +84,7 @@ const Sidebar = () => {
   };
 
   // Fetch real email counts from API
- const fetchEmailCounts = async () => {
+const fetchEmailCounts = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
     if (response.ok) {
@@ -89,52 +92,56 @@ const Sidebar = () => {
       setInboxCount(counts.inbox || 0);
       setSentCount(counts.sent || 0);
       setDraftsCount(counts.drafts || 0);
-    } else {
-      console.warn("API did not return OK, using fallback");
-      calculateCountsFromLocal();
     }
   } catch (error) {
     console.error("Error fetching email counts:", error);
-    calculateCountsFromLocal();
+    // Fallback: sum inbox lengths from all connected accounts
+    const totalInbox = connectedAccounts.reduce(
+      (sum, account) => sum + (account.inbox?.length || 0),
+      0
+    );
+    setInboxCount(totalInbox);
   }
 };
 
-// 🔹 Fallback: Calculate from connectedAccounts
-const calculateCountsFromLocal = () => {
-  let totalInbox = 0;
-  let totalSent = 0;
-  let totalDrafts = 0;
+  // Show remove confirmation modal
+  const showRemoveConfirmation = (accountEmail) => {
+    setAccountToRemove(accountEmail);
+    setShowRemoveModal(true);
+  };
 
-  connectedAccounts.forEach((account) => {
-    // Adjust these based on how your local data is stored
-    totalInbox += account.inbox?.length || 0;
-    totalSent += account.sent?.length || 0;
-    totalDrafts += account.drafts?.length || 0;
-  });
-
-  setInboxCount(totalInbox);
-  setSentCount(totalSent);
-  setDraftsCount(totalDrafts);
-};
-
-
-  const handleRemoveAccount = async (accountEmail) => {
+  // Handle confirmed account removal
+  const handleConfirmRemoveAccount = async () => {
+    if (!accountToRemove) return;
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/emails/remove`, {
+      const response = await fetch(`${API_BASE_URL}/api/emails/${accountToRemove}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: accountEmail })
       });
-      
+
       if (response.ok) {
-        // Refresh connected accounts
-        fetchConnectedAccounts();
+        fetchConnectedAccounts(); // refresh accounts
+        // Close expanded state for removed account
+        const accountIndex = connectedAccounts.findIndex(acc => acc.email === accountToRemove);
+        if (accountIndex !== -1) {
+          setExpandedAccounts(prev => ({
+            ...prev,
+            [accountIndex]: false
+          }));
+        }
       }
     } catch (error) {
       console.error('Error removing account:', error);
+    } finally {
+      setShowRemoveModal(false);
+      setAccountToRemove(null);
     }
+  };
+
+  // Cancel remove account
+  const handleCancelRemoveAccount = () => {
+    setShowRemoveModal(false);
+    setAccountToRemove(null);
   };
 
   const toggleAccountExpansion = (index) => {
@@ -210,6 +217,44 @@ const calculateCountsFromLocal = () => {
               className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2 px-4 rounded-lg transition-all"
             >
               Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const RemoveAccountModal = () => (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
+      <div className="bg-black/90 backdrop-blur-xl border border-orange-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Trash2 className="w-8 h-8 text-white" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-2">Remove Account</h3>
+          <p className="text-gray-300 text-sm mb-2">
+            Are you sure you want to remove this Gmail account?
+          </p>
+          <p className="text-orange-300 font-medium text-sm mb-6">
+            {accountToRemove}
+          </p>
+          <p className="text-gray-400 text-xs mb-6">
+            This will disconnect the account from Chatterbyte. Your emails will remain in Gmail.
+          </p>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={handleCancelRemoveAccount}
+              className="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmRemoveAccount}
+              className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium py-2 px-4 rounded-lg transition-all"
+            >
+              Remove
             </button>
           </div>
         </div>
@@ -362,10 +407,7 @@ const calculateCountsFromLocal = () => {
                         {/* Account Options - Expanded */}
                         {expandedAccounts[index] && (
                           <div className="border-t border-gray-600 p-2 space-y-1">
-                            <button className="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all text-sm">
-                              <Inbox className="w-4 h-4" />
-                              <span>Inbox ({account.inbox?.length || 0})</span>
-                            </button>
+                           
                             <button className="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all text-sm">
                               <Send className="w-4 h-4" />
                               <span>Sent ({account.sent?.length || 0})</span>
@@ -382,11 +424,11 @@ const calculateCountsFromLocal = () => {
                               <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleRemoveAccount(account.email);
+                                  showRemoveConfirmation(account.email);
                                 }}
                                 className="w-full flex items-center gap-2 p-2 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm"
                               >
-                                <X className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                                 <span>Remove Account</span>
                               </button>
                             </div>
@@ -472,6 +514,9 @@ const calculateCountsFromLocal = () => {
 
       {/* Logout Modal */}
       {showLogoutModal && <LogoutModal />}
+
+      {/* Remove Account Modal */}
+      {showRemoveModal && <RemoveAccountModal />}
     </>
   );
 };
