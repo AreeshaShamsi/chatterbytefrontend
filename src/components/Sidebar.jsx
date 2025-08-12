@@ -264,6 +264,7 @@ const fetchEmailCounts = async () => {
 
   return (
     <>
+    <div class="fixed top-0 left-0 w-19 h-screen bg-white shadow-md p-4">
       {/* Mobile Hamburger Menu Button */}
       <button
         onClick={toggleSidebar}
@@ -454,6 +455,21 @@ const fetchEmailCounts = async () => {
             {/* Divider */}
             <div className="mx-4 border-t border-gray-600"></div>
 
+            {/* User Profile */}
+
+            <div className="p-4 border-t border-cyan-500/20">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm truncate">
+                  {userGmail}
+                </p>
+              </div>
+            </div>
+          </div>
+
             {/* Settings with Dropdown */}
             <div className="px-4 py-4">
               <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -497,18 +513,7 @@ const fetchEmailCounts = async () => {
           </div>
 
           {/* User Profile - Clean */}
-          <div className="p-4 border-t border-cyan-500/20">
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm truncate">
-                  {userGmail}
-                </p>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
 
@@ -517,6 +522,7 @@ const fetchEmailCounts = async () => {
 
       {/* Remove Account Modal */}
       {showRemoveModal && <RemoveAccountModal />}
+      </div>
     </>
   );
 };
