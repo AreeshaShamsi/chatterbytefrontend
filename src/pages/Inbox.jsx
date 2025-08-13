@@ -44,7 +44,7 @@ export default function InboxPage() {
         const API_BASE_URL =
           window.location.hostname === "localhost"
             ? "http://localhost:5000"
-            : "https://chatterbytebackend.vercel.app/";
+            : "https://chatterbytebackend.vercel.app";
 
         const res = await fetch(`${API_BASE_URL}/api/emails`, {
           method: "GET",
