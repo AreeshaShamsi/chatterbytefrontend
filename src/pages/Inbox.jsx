@@ -5,7 +5,7 @@ import {
   Clock, AlertCircle, Tag, Filter, ArrowLeft, Reply, 
   ReplyAll, Forward, Printer, X, Bell
 } from "lucide-react";
-import Sidebar from "../components/Sidebar"; // Import your existing sidebar component
+import Sidebar from "../components/Sidebar"; // Import your fixed sidebar component
 
 export default function InboxPage() {
   const [allEmails, setAllEmails] = useState([]);
@@ -154,12 +154,14 @@ export default function InboxPage() {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar Container - Fixed positioning for mobile, relative for desktop */}
       <div className={`
         ${isMobile ? 'fixed' : 'relative'} 
         inset-y-0 left-0 z-50 
+        ${isMobile ? 'w-80' : 'w-80'}
         transform transition-transform duration-300 ease-in-out
         ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
+        ${!isMobile ? 'flex-shrink-0' : ''}
       `}>
         <Sidebar 
           totalEmails={totalEmails}
@@ -169,10 +171,9 @@ export default function InboxPage() {
         />
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Properly positioned relative to sidebar */}
       <div className={`
         flex-1 flex flex-col min-w-0
-        ${!isMobile ? 'ml-0' : ''}
         transition-all duration-300 ease-in-out
       `}>
         {/* Top Header */}

@@ -22,8 +22,7 @@ import {
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const Sidebar = ({ totalEmails, isMobile, isOpen, onClose }) => {
   const [connectedAccounts, setConnectedAccounts] = useState([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
@@ -31,7 +30,7 @@ const Sidebar = () => {
   const [loading, setLoading] = useState(true);
   const [expandedAccounts, setExpandedAccounts] = useState({});
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [userGmail, setUserGmail] = useState('user@gmail.com'); // Default placeholder
+  const [userGmail, setUserGmail] = useState('user@gmail.com');
   const [inboxCount, setInboxCount] = useState(0);
   const [sentCount, setSentCount] = useState(0);
   const [draftsCount, setDraftsCount] = useState(0);
@@ -39,11 +38,11 @@ const Sidebar = () => {
   // API Configuration
   const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000' 
-    : 'https://chatterbytebackend.vercel.app/';
+    : 'https://chatterbytefrontend.vercel.app/';
 
   // Menu items with dynamic counts
   const menuItems = [
-    { id: 'inbox', icon: Inbox, label: 'Inbox', count: inboxCount, active: true },
+    { id: 'inbox', icon: Inbox, label: 'Inbox', count: totalEmails || inboxCount, active: true },
     { id: 'sent', icon: Send, label: 'Sent', count: sentCount },
     { id: 'drafts', icon: Edit3, label: 'Drafts', count: draftsCount },
     { id: 'notes', icon: FileText, label: 'Meeting Notes' },
@@ -60,14 +59,15 @@ const Sidebar = () => {
 
   // Fetch real Firebase user email
   const fetchUserData = () => {
-  onAuthStateChanged(auth, (user) => {
-    if (user?.email) {
-      setUserGmail(user.email);
-    } else {
-      setUserGmail("user@gmail.com");
-    }
-  });
-};
+    onAuthStateChanged(auth, (user) => {
+      if (user?.email) {
+        setUserGmail(user.email);
+      } else {
+        setUserGmail("user@gmail.com");
+      }
+    });
+  };
+
   const fetchConnectedAccounts = async () => {
     try {
       setLoading(true);
@@ -84,25 +84,25 @@ const Sidebar = () => {
   };
 
   // Fetch real email counts from API
-const fetchEmailCounts = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
-    if (response.ok) {
-      const counts = await response.json();
-      setInboxCount(counts.inbox || 0);
-      setSentCount(counts.sent || 0);
-      setDraftsCount(counts.drafts || 0);
+  const fetchEmailCounts = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
+      if (response.ok) {
+        const counts = await response.json();
+        setInboxCount(counts.inbox || 0);
+        setSentCount(counts.sent || 0);
+        setDraftsCount(counts.drafts || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching email counts:", error);
+      // Fallback: sum inbox lengths from all connected accounts
+      const totalInbox = connectedAccounts.reduce(
+        (sum, account) => sum + (account.inbox?.length || 0),
+        0
+      );
+      setInboxCount(totalInbox);
     }
-  } catch (error) {
-    console.error("Error fetching email counts:", error);
-    // Fallback: sum inbox lengths from all connected accounts
-    const totalInbox = connectedAccounts.reduce(
-      (sum, account) => sum + (account.inbox?.length || 0),
-      0
-    );
-    setInboxCount(totalInbox);
-  }
-};
+  };
 
   // Show remove confirmation modal
   const showRemoveConfirmation = (accountEmail) => {
@@ -182,16 +182,6 @@ const fetchEmailCounts = async () => {
     setShowLogoutModal(false);
   };
 
-  // Fixed toggleSidebar function
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
-
-  // Close sidebar when clicking outside on mobile
-  const handleOverlayClick = () => {
-    setIsOpen(false);
-  };
-
   const LogoutModal = () => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
       <div className="bg-black/90 backdrop-blur-xl border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
@@ -264,41 +254,27 @@ const fetchEmailCounts = async () => {
 
   return (
     <>
-    <div class="fixed top-0 left-0 w-19 h-screen bg-white shadow-md p-4">
-      {/* Mobile Hamburger Menu Button */}
-      <button
-        onClick={toggleSidebar}
-        className="lg:hidden fixed top-4 left-4 z-[60] bg-gradient-to-br from-cyan-400 to-blue-600 p-3 rounded-xl shadow-lg"
-      >
-        {isOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
-      </button>
-
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[40]"
-          onClick={handleOverlayClick}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`
-        fixed left-0 top-0 h-full w-80 bg-gradient-to-b from-gray-900 via-black to-blue-900 
-        border-r border-cyan-500/20 z-[50] transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `} style={{
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}>
+      {/* Sidebar - Removed the duplicate div wrapper and fixed positioning */}
+      <div className="h-full w-80 bg-gradient-to-b from-gray-900 via-black to-blue-900 border-r border-cyan-500/20 overflow-y-auto scrollbar-hide">
         <style jsx>{`
           .scrollbar-hide::-webkit-scrollbar {
             display: none;
           }
         `}</style>
+        
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-6 border-b border-cyan-500/20 flex-shrink-0">
             <div className="flex items-center gap-3">
+              {/* Close button for mobile */}
+              {isMobile && (
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors md:hidden"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              )}
               <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center">
                 <Mail className="w-6 h-6 text-white" />
               </div>
@@ -312,11 +288,7 @@ const fetchEmailCounts = async () => {
           </div>
 
           {/* Content Container - Hidden Scrollbar */}
-          <div className="flex-1 flex flex-col overflow-y-auto scrollbar-hide" style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            '&::-webkit-scrollbar': { display: 'none' }
-          }}>
+          <div className="flex-1 flex flex-col overflow-y-auto scrollbar-hide">
             {/* Menu Items */}
             <div className="px-4 py-4">
               <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -329,7 +301,10 @@ const fetchEmailCounts = async () => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setIsOpen(false)} // Close sidebar on mobile when item clicked
+                      onClick={() => {
+                        // Close sidebar on mobile when item clicked
+                        if (isMobile && onClose) onClose();
+                      }}
                       className={`
                         w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group
                         ${item.active 
@@ -408,7 +383,6 @@ const fetchEmailCounts = async () => {
                         {/* Account Options - Expanded */}
                         {expandedAccounts[index] && (
                           <div className="border-t border-gray-600 p-2 space-y-1">
-                           
                             <button className="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-cyan-500/10 hover:text-cyan-400 transition-all text-sm">
                               <Send className="w-4 h-4" />
                               <span>Sent ({account.sent?.length || 0})</span>
@@ -455,21 +429,6 @@ const fetchEmailCounts = async () => {
             {/* Divider */}
             <div className="mx-4 border-t border-gray-600"></div>
 
-            {/* User Profile */}
-
-            <div className="p-4 border-t border-cyan-500/20">
-            <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm truncate">
-                  {userGmail}
-                </p>
-              </div>
-            </div>
-          </div>
-
             {/* Settings with Dropdown */}
             <div className="px-4 py-4">
               <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -510,10 +469,21 @@ const fetchEmailCounts = async () => {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* User Profile - Clean */}
-          
+            {/* User Profile */}
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-3 p-2 rounded-lg bg-white/5">
+                <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-full flex items-center justify-center">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium text-sm truncate">
+                    {userGmail}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -522,7 +492,6 @@ const fetchEmailCounts = async () => {
 
       {/* Remove Account Modal */}
       {showRemoveModal && <RemoveAccountModal />}
-      </div>
     </>
   );
 };
