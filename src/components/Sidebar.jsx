@@ -18,6 +18,7 @@ import {
   Trash2
 } from 'lucide-react';
 
+
 // Import Firebase Auth (add this to your actual project)
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
