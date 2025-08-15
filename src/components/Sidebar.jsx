@@ -72,7 +72,10 @@ const Sidebar = ({ totalEmails, isMobile, isOpen, onClose }) => {
   const fetchConnectedAccounts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/emails`);
+      const response = await fetch(`${API_BASE_URL}/api/emails`, {
+      method: "GET",
+      credentials: "include" // ✅ send session cookie
+    });
       if (response.ok) {
         const data = await response.json();
         setConnectedAccounts(data);
@@ -85,25 +88,30 @@ const Sidebar = ({ totalEmails, isMobile, isOpen, onClose }) => {
   };
 
   // Fetch real email counts from API
-  const fetchEmailCounts = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/emails/counts`);
-      if (response.ok) {
-        const counts = await response.json();
-        setInboxCount(counts.inbox || 0);
-        setSentCount(counts.sent || 0);
-        setDraftsCount(counts.drafts || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching email counts:", error);
-      // Fallback: sum inbox lengths from all connected accounts
-      const totalInbox = connectedAccounts.reduce(
-        (sum, account) => sum + (account.inbox?.length || 0),
-        0
-      );
-      setInboxCount(totalInbox);
-    }
-  };
+const fetchEmailCounts = async () => {
+  try {
+    // Ensure connected accounts are already loaded
+    const totalInbox = connectedAccounts.reduce(
+      (sum, account) => sum + (account.inbox?.length || 0),
+      0
+    );
+    const totalSent = connectedAccounts.reduce(
+      (sum, account) => sum + (account.sent?.length || 0),
+      0
+    );
+    const totalDrafts = connectedAccounts.reduce(
+      (sum, account) => sum + (account.drafts?.length || 0),
+      0
+    );
+
+    setInboxCount(totalInbox);
+    setSentCount(totalSent);
+    setDraftsCount(totalDrafts);
+
+  } catch (error) {
+    console.error("Error calculating counts:", error);
+  }
+};
 
   // Show remove confirmation modal
   const showRemoveConfirmation = (accountEmail) => {
@@ -118,6 +126,7 @@ const Sidebar = ({ totalEmails, isMobile, isOpen, onClose }) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/emails/${accountToRemove}`, {
         method: 'DELETE',
+      credentials: "include"
       });
 
       if (response.ok) {
